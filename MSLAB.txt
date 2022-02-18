@@ -1,0 +1,273 @@
+chmod 777 mvnw
+./mvnw spring-boot:run
+
+
+application properties
+
+spring.jpa.hibernate.ddl-auto = update
+spring.datasource.url= jdbc:mysql://localhost:3306/airport
+spring.datasource.username= root
+#TODO: Change this
+spring.datasource.password= 
+spring.datasource.driver-class-name= com.mysql.cj.jdbc.Driver
+
+server.port=3002
+spring.application.name=administration
+eureka.client.serviceUrl.defaultZone=http://localhost:3000/eureka
+
+model
+
+package com.example.Administration.model;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table 
+public class Flight {
+    @Id
+    private String id;
+    @Column
+    private String status;
+    @Column
+    private String location;
+    @Column
+    private String pincode;
+    @Column
+    private String deliveryMode;
+	public Flight()
+	{
+		
+	}
+    public Flight(String string, String string2, String string3, String string4, String string5) {
+        id=string;
+		status = string2;
+        location=string3;
+        pincode=string4;
+        deliveryMode=string5;
+    }
+    
+    
+
+    /**
+     * @return String return the id
+     */
+    public String getId() {
+        return id;
+    }
+
+    /**
+     * @param id the id to set
+     */
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    /**
+     * @return String return the status
+     */
+    public String getStatus() {
+        return status;
+    }
+
+    /**
+     * @param status the status to set
+     */
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    /**
+     * @return String return the location
+     */
+    public String getLocation() {
+        return location;
+    }
+
+    /**
+     * @param location the location to set
+     */
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    /**
+     * @return String return the pincode
+     */
+    public String getPincode() {
+        return pincode;
+    }
+
+    /**
+     * @param pincode the pincode to set
+     */
+    public void setPincode(String pincode) {
+        this.pincode = pincode;
+    }
+
+    /**
+     * @return String return the deliveryMode
+     */
+    public String getDeliveryMode() {
+        return deliveryMode;
+    }
+
+    /**
+     * @param deliveryMode the deliveryMode to set
+     */
+    public void setDeliveryMode(String deliveryMode) {
+        this.deliveryMode = deliveryMode;
+    }
+
+}
+
+
+repository
+
+package com.example.Administration.repository;
+
+import com.example.Administration.model.Flight;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface FlightRepository extends JpaRepository<Flight, String> {
+}
+
+
+service
+
+package com.example.Administration.service;
+
+import com.example.Administration.model.Flight;
+import com.example.Administration.repository.FlightRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class FlightService {
+
+    private final FlightRepository flightRepository;
+
+    public FlightService(FlightRepository flightRepository) {
+        this.flightRepository = flightRepository;
+    }
+
+    public List<Flight> getAllFlights() {
+        return flightRepository.findAll();
+    }
+
+    public Flight getFlight(String flightID) {
+        return flightRepository.findById(flightID).orElse(null);
+    }
+
+
+    public Flight create(Flight flight) {
+        return flightRepository.save(flight);
+    }
+
+    public void delete(String flightId) {
+        flightRepository.deleteById(flightId);
+    }
+
+    public Flight update(Flight flight,String flightId) {
+       Flight flight1 = flightRepository.findById(flightId).get();
+        flight1.setStatus(flight.getStatus());
+        flight1.setLocation(flight.getLocation());
+        flight1.setPincode(flight.getPincode());
+        flight1.setDeliveryMode(flight.getDeliveryMode());
+        flightRepository.save(flight1);
+        return flight1;
+    }
+
+    public void deleteAll() {
+        flightRepository.deleteAll();
+    }
+}
+
+
+controller
+
+package com.example.Administration.controller;
+
+import com.example.Administration.model.Flight;
+import com.example.Administration.service.FlightService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RequestMapping("/administration")
+@RestController
+public class FlightController {
+    private final FlightService flightService;
+
+    public FlightController(FlightService flightService) {
+        this.flightService = flightService;
+    }
+
+    @GetMapping("/getAllFlights")
+    public List<Flight> getAllFlights() {
+        return flightService.getAllFlights();
+    }
+
+    @GetMapping("/get/{flightID}")
+    public Flight getFlight(@PathVariable String flightID) {
+        return flightService.getFlight(flightID);
+    }
+
+    @PostMapping("/createFlight")
+    public Flight createFlight(@RequestBody Flight flight) {
+        return flightService.create(flight);
+    }
+
+    @DeleteMapping("/deleteFlight/{flightId}")
+    public String deleteFlight(@PathVariable String flightId) {
+        flightService.delete(flightId);
+        return "Flight deleted";
+    }
+
+    @PutMapping("/updateFlight/{flightId}")
+    public Flight updateBook(@RequestBody Flight flight, @PathVariable String flightId) {
+        return flightService.update(flight, flightId);
+    }
+
+    @DeleteMapping("/deleteAll")
+    public String deleteFlights() {
+        flightService.deleteAll();
+        return "All flights deleted";
+    }
+}
+
+
+
+APPLICATION.YAML
+
+
+
+server:
+  port: 3081
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+      - id: customer
+        uri: http://localhost:3001/
+        predicates:
+        - Path=/customer/**
+      - id: administration
+        uri: http://localhost:3002/
+        predicates:
+        - Path=/administration/**
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:3000/eureka
+  registerWithEureka:
+       - true
+  fetchRegistry:
+       - true
